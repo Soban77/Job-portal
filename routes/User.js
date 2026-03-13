@@ -8,6 +8,14 @@ router.get('/', async (req,res) => {
 
     const all = await user.find({});
 
+    return res.status(200).json(all);
+
+  } catch(err) {
+
+    return res.status(500).json({ error: err.message});
+
   }
 
-})
+});
+
+module.exports = router;
