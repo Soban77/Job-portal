@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const user = require('../models/user.js');
+const mesage = require('../models/job.js');
 
 router.get('/', async (req,res) => {
 
   try {
 
-    const all = await user.find({});
+    const all = await mesage.find({});
 
     return res.status(200).json(all);
 
@@ -22,7 +22,7 @@ router.post('/', async (req,res) => {
 
   try {
 
-    const us = new user(req.body);
+    const us = new mesage(req.body);
     await us.save();
     return res.status(201).json({ message: 'Successful' });
 
