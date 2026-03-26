@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const job = require('../models/job.js');
+const { protect, authorize } = require('../middleware/authMiddleware')
 
 router.get('/', async (req,res) => {
 
@@ -18,20 +19,16 @@ router.get('/', async (req,res) => {
 
 });
 
-router.post('/', async (req,res) => {
-
+router.post('/', protect, authorize('employer'), async (req, res) => {
   try {
 
-    const us = new job(req.body);
-    await us.save();
-    return res.status(201).json({ message: 'Successful' });
-
-  } catch(err) {
-
+    const Job = new job({ ...req.body, employer: req.user._id });
+    await Job.save();
+    return res.status(201).json({ message: 'Successful', Job });
+  } catch (err) {
     return res.status(500).json({ error: err.message });
-
   }
-
 });
+
 
 module.exports = router;
