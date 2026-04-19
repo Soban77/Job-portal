@@ -24,27 +24,14 @@
     <div class="mb-3">
       <label class="form-label">Role</label>
       <select class="form-select" name="role" required>
-        <option value="seeker">Seeker</option>
+        <option value="seeker">Job Seeker</option>
         <option value="employer">Employer</option>
+        <option value="admin">Admin</option>
       </select>
     </div>
     <button type="submit" class="btn btn-primary w-100">Register</button>
   </form>
 
-  <script>
-    document.getElementById('registerForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = Object.fromEntries(new FormData(e.target).entries());
-
-      const res = await fetch('http://localhost:5000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await res.json();
-      alert(data.token ? "Registered successfully!" : data.error);
-    });
-  </script>
+  <script src="Scripts/register.js"></script>
 </body>
 </html>
