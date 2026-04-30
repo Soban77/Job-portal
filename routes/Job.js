@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const job = require('../models/job.js');
-const { protect, authorize } = require('../middleware/authMiddleware')
+const { protect, authorize } = require('../middlewares/authMiddleware.js');
 
 router.get('/', async (req,res) => {
 
