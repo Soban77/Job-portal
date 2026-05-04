@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const connect = async () => {
   try {
-    await mongoose.connect('mongodb://127.0.0.1:27017/online-job-portal');
+    const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/online-job-portal';
+    await mongoose.connect(uri);
     // , {
     //   useNewUrlParser: true,
     //   useUnifiedTopology: true,
