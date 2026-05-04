@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Details - Job Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="../index.html">Job Portal</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="seeker_dashboard.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="profile.html">Profile</a></li>
+          <li class="nav-item"><a class="nav-link" href="messages.html">Messages</a></li>
+          <li class="nav-item"><button class="btn btn-outline-light ms-2" onclick="logout()">Logout</button></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <div class="card p-4 shadow">
+      <h2>Application Details</h2>
+      <div id="applicationDetails"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="Job_Seeker/scripts/seeker_dashboard.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const appId = urlParams.get('id');
+
+    async function loadApplicationDetails() {
+      const res = await fetch(`http://localhost:5000/application/${appId}`, {
+        headers: authHeaders()
+      });
+      const app = await res.json();
+      if (res.ok) {
+        document.getElementById('applicationDetails').innerHTML = `
+          <div class="mb-3">
+            <strong>Job Title:</strong> ${app.job?.title || 'Unknown'}
+          </div>
+          <div class="mb-3">
+            <strong>Status:</strong> <span class="badge bg-${app.status === 'accepted' ? 'success' : app.status === 'rejected' ? 'danger' : 'warning'}">${app.status}</span>
+          </div>
+          <div class="mb-3">
+            <strong>Applied At:</strong> ${new Date(app.createdAt).toLocaleString()}
+          </div>
+          <div class="mb-3">
+            <strong>Interview Scheduled:</strong> ${app.interviewDate ? new Date(app.interviewDate).toLocaleString() : 'Not scheduled'}
+          </div>
+          <div class="mb-3">
+            <strong>Notes:</strong> ${app.notes || 'None'}
+          </div>
+        `;
+      } else {
+        document.getElementById('applicationDetails').innerHTML = '<p class="text-danger">Application not found.</p>';
+      }
+    }
+
+    loadApplicationDetails();
+  </script>
+</body>
+</html>

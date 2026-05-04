@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Details - Job Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="../index.html">Job Portal</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="seeker_dashboard.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="../profile.html">Profile</a></li>
+          <li class="nav-item"><a class="nav-link" href="../messages.html">Messages</a></li>
+          <li class="nav-item"><button class="btn btn-outline-light ms-2" onclick="logout()">Logout</button></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <div id="jobDetails" class="card p-4 shadow">
+      <h2 id="jobTitle"></h2>
+      <div class="mb-3">
+        <span class="badge bg-secondary" id="jobCategory"></span>
+        <span class="badge bg-info ms-2" id="jobStatus"></span>
+      </div>
+      <p id="jobDescription"></p>
+      <div class="mb-3">
+        <strong>Skills Required:</strong>
+        <div id="jobSkills"></div>
+      </div>
+      <div class="mb-3">
+        <strong>Posted by:</strong> <span id="jobEmployer"></span>
+      </div>
+      <button class="btn btn-success" id="applyBtn" onclick="applyJob()">Apply for this Job</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="scripts/seeker_dashboard.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const jobId = urlParams.get('id');
+
+    async function loadJobDetails() {
+      const res = await fetch(`http://localhost:5000/job/${jobId}`);
+      const job = await res.json();
+      if (res.ok) {
+        document.getElementById('jobTitle').textContent = job.title;
+        document.getElementById('jobCategory').textContent = job.category || 'General';
+        document.getElementById('jobStatus').textContent = job.status;
+        document.getElementById('jobDescription').textContent = job.description || '';
+        document.getElementById('jobSkills').innerHTML = (Array.isArray(job.skillsRequired) ? job.skillsRequired : []).map(skill => `<span class="badge bg-light text-dark me-1">${skill}</span>`).join('');
+        document.getElementById('jobEmployer').textContent = job.employerId?.name || 'Unknown';
+      } else {
+        document.getElementById('jobDetails').innerHTML = '<p class="text-danger">Job not found.</p>';
+      }
+    }
+
+    async function applyJob() {
+      const res = await fetch('http://localhost:5000/application', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ jobId })
+      });
+      const data = await res.json();
+      alert(data.message || data.error || 'Unable to apply');
+      document.getElementById('applyBtn').disabled = true;
+      document.getElementById('applyBtn').textContent = 'Applied';
+    }
+
+    loadJobDetails();
+  </script>
+</body>
+</html>
