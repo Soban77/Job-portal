@@ -17,7 +17,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       if (data.user.role === "employer") {
         window.location.href = "employer_dashboard.html";
       } else if (data.user.role === "seeker") {
-        window.location.href = "seeker_dashboard.html";
+        window.location.href = "Job_Seeker/seeker_dashboard.html";
       } else if (data.user.role === "admin") {
         window.location.href = "admin_dashboard.html";
       }
