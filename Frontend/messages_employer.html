@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages - Employer - Job Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+  <!-- Employer Navbar (Dark) -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">Job Portal</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="employer_dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="post_job.html"><i class="fas fa-plus"></i> Post Job</a></li>
+          <li class="nav-item"><a class="nav-link" href="candidate_search.html"><i class="fas fa-users"></i> Search Candidates</a></li>
+          <li class="nav-item"><a class="nav-link active" href="messages_employer.html"><i class="fas fa-envelope"></i> Messages</a></li>
+        </ul>
+        <button class="btn btn-outline-light" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <h2 class="text-center mb-4">Messages</h2>
+    <p class="text-center text-muted">Communicate with candidates about job opportunities and interviews.</p>
+  </div>
+
+  <div class="container mt-4">
+    <div class="row">
+      <!-- Messages List -->
+      <div class="col-lg-7">
+        <div class="card shadow-sm">
+          <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-inbox"></i> Your Messages
+              <button class="btn btn-sm btn-outline-light float-end" onclick="loadMessages()"><i class="fas fa-sync"></i> Refresh</button>
+            </h5>
+          </div>
+          <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+            <div id="messageList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Send Message Form -->
+      <div class="col-lg-5">
+        <div class="card shadow-sm">
+          <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="fas fa-paper-plane"></i> Send Message</h5>
+          </div>
+          <div class="card-body">
+            <form id="messageForm">
+              <div class="mb-3">
+                <label class="form-label">Candidate User ID <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="receiverId" placeholder="Copy candidate's ID from profile" required>
+                <small class="text-muted">Find candidate ID in their profile or application info</small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Job ID (optional)</label>
+                <input type="text" class="form-control" name="jobId" placeholder="Related job ID">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Message <span class="text-danger">*</span></label>
+                <textarea class="form-control" name="messageText" rows="5" placeholder="Type your message here..." required></textarea>
+              </div>
+              <button type="submit" class="btn btn-dark w-100">
+                <i class="fas fa-send"></i> Send Message
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      window.location.href = 'index.html';
+    }
+
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      };
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    async function loadMessages() {
+      try {
+        const res = await fetch('http://localhost:5000/message', {
+          headers: authHeaders()
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to load messages');
+        }
+
+        const messages = await res.json();
+        const messageList = document.getElementById('messageList');
+
+        if (!Array.isArray(messages) || messages.length === 0) {
+          messageList.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i> No messages yet.</div>';
+          return;
+        }
+
+        messageList.innerHTML = messages.map(msg => {
+          const senderName = msg.senderId?.name || msg.senderId || 'Unknown Sender';
+          const timestamp = new Date(msg.timestamp).toLocaleString();
+          return `
+            <div class="card mb-3 border-start border-dark border-4">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div>
+                    <h6 class="mb-1"><strong>From: ${senderName}</strong></h6>
+                    <small class="text-muted">${timestamp}</small>
+                  </div>
+                  ${msg.jobId ? `<span class="badge bg-secondary">Job: ${msg.jobId}</span>` : ''}
+                </div>
+                <p class="mb-0">${msg.messageText}</p>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        const messageList = document.getElementById('messageList');
+        messageList.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Error: ${err.message}</div>`;
+      }
+    }
+
+    document.getElementById('messageForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const formData = Object.fromEntries(new FormData(e.target).entries());
+        
+        const res = await fetch('http://localhost:5000/message', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(formData)
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          throw new Error(result.error || 'Failed to send message');
+        }
+
+        alert('Message sent successfully!');
+        e.target.reset();
+        await loadMessages();
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+      }
+    });
+
+    // Load messages on page load
+    loadMessages();
+  </script>
+</body>
+</html>

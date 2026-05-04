@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics - Job Portal Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="gradient-bg">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-secondary glass-effect">
+    <div class="container">
+      <a class="navbar-brand" href="index.html"><i class="fas fa-cogs"></i> Job Portal Admin</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="admin_dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link active" href="analytics.html"><i class="fas fa-chart-bar"></i> Analytics</a></li>
+          <li class="nav-item"><a class="nav-link" href="profile.html"><i class="fas fa-user"></i> Profile</a></li>
+          <li class="nav-item"><a class="nav-link" href="messages_admin.html"><i class="fas fa-envelope"></i> Messages</a></li>
+        </ul>
+        <button class="btn btn-outline-light" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4 fade-in">
+    <div class="hero-banner text-center mb-4">
+      <h1 class="text-shadow"><i class="fas fa-chart-line"></i> Platform Analytics</h1>
+      <p class="lead">Insights into user activity, jobs, and applications.</p>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col-md-3">
+        <div class="card p-3 text-center glass-effect">
+          <i class="fas fa-users fa-2x text-primary mb-2"></i>
+          <h3 id="totalUsers">0</h3>
+          <p>Total Users</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card p-3 text-center glass-effect">
+          <i class="fas fa-user-tie fa-2x text-success mb-2"></i>
+          <h3 id="totalEmployers">0</h3>
+          <p>Employers</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card p-3 text-center glass-effect">
+          <i class="fas fa-user-graduate fa-2x text-info mb-2"></i>
+          <h3 id="totalSeekers">0</h3>
+          <p>Job Seekers</p>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card p-3 text-center glass-effect">
+          <i class="fas fa-briefcase fa-2x text-warning mb-2"></i>
+          <h3 id="totalJobs">0</h3>
+          <p>Jobs Posted</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card p-4 glass-effect">
+          <h3><i class="fas fa-list"></i> Recent Applications</h3>
+          <div id="recentApplications">
+            <p class="text-muted">Loading...</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card p-4 glass-effect">
+          <h3><i class="fas fa-chart-pie"></i> Job Categories</h3>
+          <div id="jobCategories">
+            <p class="text-muted">Loading...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="Scripts/admin_dashboard.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      };
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = 'index.html';
+    }
+
+    async function loadAnalytics() {
+      try {
+        // Load users
+        const usersRes = await fetch('http://localhost:5000/user', { headers: authHeaders() });
+        const users = await usersRes.json();
+        document.getElementById('totalUsers').textContent = users.length;
+        document.getElementById('totalEmployers').textContent = users.filter(u => u.role === 'employer').length;
+        document.getElementById('totalSeekers').textContent = users.filter(u => u.role === 'seeker').length;
+
+        // Load jobs
+        const jobsRes = await fetch('http://localhost:5000/job');
+        const jobs = await jobsRes.json();
+        document.getElementById('totalJobs').textContent = jobs.length;
+
+        // Recent applications
+        const appsRes = await fetch('http://localhost:5000/application', { headers: authHeaders() });
+        const apps = await appsRes.json();
+        const recentApps = apps.slice(0, 5);
+        document.getElementById('recentApplications').innerHTML = recentApps.map(a => `
+          <div class="mb-2 p-2 border rounded">
+            <strong>${a.seekerId?.name || 'Unknown'}</strong> applied for <em>${a.jobId?.title || 'Unknown'}</em>
+            <br><small class="text-muted">${new Date(a.appliedDate).toLocaleDateString()}</small>
+          </div>
+        `).join('') || '<p>No recent applications.</p>';
+
+        // Job categories
+        const categories = {};
+        jobs.forEach(job => {
+          const cat = job.category || 'General';
+          categories[cat] = (categories[cat] || 0) + 1;
+        });
+        document.getElementById('jobCategories').innerHTML = Object.entries(categories).map(([cat, count]) => `
+          <div class="d-flex justify-content-between mb-2">
+            <span>${cat}</span>
+            <span class="badge bg-primary">${count}</span>
+          </div>
+        `).join('') || '<p>No jobs yet.</p>';
+
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load analytics');
+      }
+    }
+
+    loadAnalytics();
+  </script>
+</body>
+</html>
