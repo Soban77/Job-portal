@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Job Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="../index.html">Job Portal</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" id="dashboardLink" href="#">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="profile.html">Profile</a></li>
+          <li class="nav-item"><a class="nav-link" href="messages.html">Messages</a></li>
+          <li class="nav-item"><button class="btn btn-outline-light ms-2" onclick="logout()">Logout</button></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <div class="card p-4 shadow">
+      <h2>Edit Profile</h2>
+      <form id="profileForm">
+        <div class="mb-3">
+          <label for="name" class="form-label">Name</label>
+          <input type="text" class="form-control" id="name" required>
+        </div>
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <input type="email" class="form-control" id="email" readonly>
+        </div>
+        <div id="seekerFields">
+          <div class="mb-3">
+            <label for="skills" class="form-label">Skills (comma-separated)</label>
+            <input type="text" class="form-control" id="skills">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Resume</label>
+            <div class="border p-3 mb-3">
+              <div id="currentResume" class="mb-2">
+                <!-- Current resume display will be populated by JavaScript -->
+              </div>
+              <input type="file" class="form-control mb-2" id="resumeFile" accept=".pdf,.docx,.doc">
+              <button type="button" class="btn btn-secondary btn-sm" id="uploadResumeBtn">Upload Resume</button>
+              <small class="text-muted d-block">Supported formats: PDF, DOCX (Max 5MB)</small>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="profile" class="form-label">Profile Summary</label>
+            <textarea class="form-control" id="profile" rows="3"></textarea>
+          </div>
+        </div>
+        <div id="employerFields" style="display: none;">
+          <div class="mb-3">
+            <label for="company" class="form-label">Company Name</label>
+            <input type="text" class="form-control" id="company">
+          </div>
+          <div class="mb-3">
+            <label for="website" class="form-label">Website</label>
+            <input type="url" class="form-control" id="website">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Profile</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    let userRole = '';
+
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      };
+    }
+
+    async function uploadResume() {
+      const fileInput = document.getElementById('resumeFile');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert('Please select a file to upload');
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please upload a PDF or DOCX file');
+        return;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const uploadBtn = document.getElementById('uploadResumeBtn');
+      const originalText = uploadBtn.textContent;
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = 'Uploading...';
+
+      try {
+        const res = await fetch('http://localhost:5000/upload/resume', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert('Resume uploaded successfully!');
+          fileInput.value = '';
+          loadProfile(); // Refresh profile to show new resume
+        } else {
+          alert(data.error || 'Failed to upload resume');
+        }
+      } catch (error) {
+        alert('Network error. Please try again.');
+      } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = originalText;
+      }
+    }
+
+    async function loadProfile() {
+      const res = await fetch('http://localhost:5000/user/me', {
+        headers: authHeaders()
+      });
+      const user = await res.json();
+      if (res.ok) {
+        userRole = user.role;
+        document.getElementById('name').value = user.name;
+        document.getElementById('email').value = user.email;
+        if (user.role === 'seeker') {
+          document.getElementById('seekerFields').style.display = 'block';
+          document.getElementById('employerFields').style.display = 'none';
+          document.getElementById('skills').value = (user.skills || []).join(', ');
+          document.getElementById('profile').value = user.profileInfo || '';
+
+          // Display current resume
+          const currentResumeDiv = document.getElementById('currentResume');
+          if (user.resumeURL) {
+            currentResumeDiv.innerHTML = `
+              <p class="mb-1"><strong>Current Resume:</strong></p>
+              <a href="${user.resumeURL}" target="_blank" class="btn btn-sm btn-outline-primary me-2">View Resume</a>
+              <a href="${user.resumeURL}" download class="btn btn-sm btn-outline-success">Download</a>
+            `;
+          } else {
+            currentResumeDiv.innerHTML = '<p class="text-muted">No resume uploaded yet.</p>';
+          }
+
+          document.getElementById('dashboardLink').href = 'Job_Seeker/seeker_dashboard.html';
+        } else if (user.role === 'employer') {
+          document.getElementById('seekerFields').style.display = 'none';
+          document.getElementById('employerFields').style.display = 'block';
+          document.getElementById('company').value = user.company || '';
+          document.getElementById('website').value = user.website || '';
+          document.getElementById('dashboardLink').href = 'employer_dashboard.html';
+        } else {
+          document.getElementById('dashboardLink').href = 'admin_dashboard.html';
+        }
+      }
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const updateData = { name };
+
+      if (userRole === 'seeker') {
+        updateData.skills = document.getElementById('skills').value.split(',').map(s => s.trim()).filter(s => s);
+        updateData.profileInfo = document.getElementById('profile').value;
+        // Note: resumeURL is handled separately via file upload
+      } else if (userRole === 'employer') {
+        updateData.company = document.getElementById('company').value;
+        updateData.website = document.getElementById('website').value;
+      }
+
+      const res = await fetch('http://localhost:5000/user/me', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(updateData)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Profile updated successfully!');
+      } else {
+        alert(data.error || 'Failed to update profile');
+      }
+    });
+
+    // Add event listener for resume upload
+    document.getElementById('uploadResumeBtn').addEventListener('click', uploadResume);
+
+    loadProfile();
+  </script>
+</body>
+</html>
